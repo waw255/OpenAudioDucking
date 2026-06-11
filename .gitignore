@@ -1,0 +1,15 @@
+build/
+_build/
+*.user
+*.suo
+.vs/
+*.swp
+*.swo
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.log
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake

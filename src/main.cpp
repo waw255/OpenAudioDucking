@@ -224,14 +224,25 @@ int main(int, char**)
     while(!done){
         MSG msg; bool had=false;
         while(PeekMessageW(&msg,0,0,0,PM_REMOVE)){ had=true; TranslateMessage(&msg); DispatchMessageW(&msg); if(msg.message==WM_QUIT)done=true; }
-        if(done)break; if(!had) Sleep(5);
+        if(done)break;
 
+        // Deferred resize
         if(g_RWidth&&g_RHeight){ D3D_KRT(); g_pSwapChain->ResizeBuffers(0,g_RWidth,g_RHeight,DXGI_FORMAT_UNKNOWN,0); g_RWidth=g_RHeight=0; D3D_CRT(); }
 
-        ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame(); ImGui::NewFrame();
-        g_Ducker.Process(); auto& sm=g_Ducker.GetStatusMap();
+        bool visible = IsWindowVisible(hwnd);
+        g_Ducker.Process();
         TA();
 
+        if(!visible){
+            // 隐藏时跳过 GPU 渲染，但保持 Process 频率不降
+            Sleep(30);
+            continue;
+        }
+
+        if(!had) Sleep(10);
+
+        ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame(); ImGui::NewFrame();
+        auto& sm=g_Ducker.GetStatusMap();
         {
             ImGuiViewport* vp=ImGui::GetMainViewport();
             ImGui::SetNextWindowPos(vp->WorkPos); ImGui::SetNextWindowSize(vp->WorkSize);
@@ -329,7 +340,7 @@ int main(int, char**)
                 ImGui::SetNextWindowPos(c,ImGuiCond_Appearing,ImVec2(0.5f,0.5f));
                 if(ImGui::BeginPopupModal(t,nullptr,ImGuiWindowFlags_AlwaysAutoResize)){
                     if(ImGui::IsWindowAppearing()){
-                        popSel=-1; popPri=t[12]=='P';
+                        popSel=-1; popPri=(t[14]=='P');
                         auto apps=g_Ducker.GetActiveAudioSessions(); popApps.clear();
                         for(auto& ws:apps){
                             std::string n(ws.begin(),ws.end());

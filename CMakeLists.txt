@@ -51,12 +51,6 @@ set_target_properties(OpenAudioDucking PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-# Release: 静态链接 + 速度优化
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR NOT CMAKE_BUILD_TYPE)
-    target_link_options(OpenAudioDucking PRIVATE -static -s)
-    target_compile_options(OpenAudioDucking PRIVATE -march=native)
-endif()
-
 # ── 测试 ──
 enable_testing()
 add_subdirectory(tests)

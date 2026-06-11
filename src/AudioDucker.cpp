@@ -208,6 +208,19 @@ AudioDucker::~AudioDucker() { Stop(); CleanupCOM(); }
 void AudioDucker::AddApp(const AppConfig& c)    { apps_.push_back(c); }
 void AudioDucker::RemoveApp(const std::wstring& n) { apps_.erase(std::remove_if(apps_.begin(), apps_.end(), [&](auto& a){ return IEqual(a.processName, n); }), apps_.end()); }
 void AudioDucker::ClearApps()                    { apps_.clear(); }
+
+const char* AudioDucker::GetPhaseName() const
+{
+    switch(phase_){
+    case Idle: return "空闲";
+    case WaitingToDuck: return "等待启动";
+    case Attacking: return "闪避中";
+    case Ducking: return "已闪避";
+    case WaitingToRestore: return "等待恢复";
+    case Releasing: return "恢复中";
+    default: return "";
+    }
+}
 void AudioDucker::Start()
 {
     running_ = true; phase_ = Idle;
@@ -224,7 +237,7 @@ void AudioDucker::Stop()
     for (auto& [name, vs] : volStates_) vs.target = 1.0f;
 }
 
-// ── Get running audio apps ─────────────────────────────
+// ── GetActiveAudioSessions ─────────────────────
 std::vector<std::wstring> AudioDucker::GetActiveAudioSessions()
 {
     std::vector<std::wstring> result;

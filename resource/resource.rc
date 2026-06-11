@@ -1,0 +1,4 @@
+#include "resource.h"
+IDI_APP ICON "app.ico"
+IDI_GREEN ICON "app_green.ico"
+IDI_RED ICON "app_red.ico"

@@ -18,6 +18,7 @@ FetchContent_MakeAvailable(imgui)
 add_executable(OpenAudioDucking
     src/main.cpp
     src/AudioDucker.cpp
+    resource/resource.rc
     # ImGui core
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
@@ -31,6 +32,7 @@ add_executable(OpenAudioDucking
 
 target_include_directories(OpenAudioDucking PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/resource
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )

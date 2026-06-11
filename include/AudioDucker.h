@@ -67,6 +67,7 @@ public:
     void Process();
     const std::map<std::wstring, AppStatus>& GetStatusMap() const { return statusMap_; }
     std::vector<std::wstring> GetActiveAudioSessions();
+    const char* GetPhaseName() const;
 
     // 软渐变：每个应用跟踪实际音量与目标音量
     struct VolState {

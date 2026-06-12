@@ -37,13 +37,39 @@ Windows 音频闪避工具——当主应用播放音频时，自动降低次要
 - MinGW-w64 (通过 [WinLibs](https://winlibs.com/) 或 [MSYS2](https://www.msys2.org/))
 - 或 Visual Studio 2022
 
+项目默认使用静态链接（`-static`），生成单文件 exe，无需额外 DLL。
+
+### MinGW
+
 ```powershell
-# MinGW 构建
-cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+# Debug 构建（带调试符号，便于调试）
+cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j4
 
-# 运行时需 MinGW DLL 在同一目录:
-# libgcc_s_seh-1.dll  libstdc++-6.dll  libwinpthread-1.dll
+# Release 构建（优化 + 静态链接单文件）
+cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j4
+```
+
+### MSVC
+
+```powershell
+# Debug 构建
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Debug
+
+# Release 构建
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+```
+
+### 单文件发布
+
+Release 构建已默认生成静态链接单文件。发布版本直接复制即可：
+
+```powershell
+cmake --build build -j4 --config Release
+Copy-Item -LiteralPath "build\OpenAudioDucking.exe" -Destination "release\"
 ```
 
 ### 目录结构

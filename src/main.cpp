@@ -11,6 +11,7 @@
 #include <cmath>
 #include <chrono>
 #include <shellapi.h>
+#include <thread>
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -191,6 +192,29 @@ static void Tip(const char* t){ if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayN
 // ── main ──
 int main(int, char**)
 {
+    // ── 单实例检查 ──
+    HANDLE hMutex = CreateMutexW(nullptr, TRUE, L"OpenAudioDucking_SingleInstance");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        HWND hPrev = FindWindowW(L"OpenAudioDucking", nullptr);
+        if (hPrev)
+        {
+            if (IsIconic(hPrev)) ShowWindow(hPrev, SW_RESTORE);
+            SetForegroundWindow(hPrev);
+        }
+        // 弹窗置顶 + 10s 自动关闭
+        std::thread([&]() {
+            MessageBoxW(nullptr, L"程序已在运行中！", L"OpenAudioDucking",
+                        MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONINFORMATION);
+        }).detach();
+        Sleep(10000);
+        HWND hMB = FindWindowW(L"#32770", L"OpenAudioDucking");
+        if (hMB) PostMessageW(hMB, WM_CLOSE, 0, 0);
+        CloseHandle(hMutex);
+        return 0;
+    }
+    // hMutex will be released when process exits
+
     { wchar_t b[MAX_PATH]; GetModuleFileNameW(0,b,MAX_PATH);
       g_CfgDir=S(b); auto p=g_CfgDir.find_last_of("/\\"); g_CfgDir=g_CfgDir.substr(0,p+1); }
 

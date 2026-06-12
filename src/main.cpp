@@ -35,8 +35,8 @@ static void UpdateTrayIcon(HWND hwnd);
 // ── State ──
 static AudioDucker g_Ducker;
 static std::vector<std::string> g_Pri, g_Sec;
-static int  g_SPri=-1, g_SSec=-1, g_ActD=0, g_RecD=0, g_AtkD=150, g_RelD=800, g_DuckP=50;
-static float g_ThrDb=-30.0f;
+static int  g_SPri=-1, g_SSec=-1, g_ActD=0, g_RecD=800, g_AtkD=1000, g_RelD=800, g_DuckP=90;
+static float g_ThrDb=-50.0f;
 static bool g_Run=false, g_Dirty=false;
 static std::string g_CfgDir, g_CfgName="default", g_CfgPath;
 static std::chrono::system_clock::time_point g_ApplyTime;
@@ -109,7 +109,7 @@ static LRESULT WINAPI WP(HWND h,UINT m,WPARAM w,LPARAM l){
     case WM_DESTROY: PostQuitMessage(0); return 0;
     case WM_TRAYICON:
         if(l==WM_LBUTTONDBLCLK){
-            ShowWindow(h,SW_SHOW); SetForegroundWindow(h);
+            ShowWindow(h,SW_RESTORE); SetForegroundWindow(h); BringWindowToTop(h);
         }
         if(l==WM_RBUTTONUP){
             POINT pt; GetCursorPos(&pt);
@@ -199,16 +199,15 @@ int main(int, char**)
         if (hPrev)
         {
             if (IsIconic(hPrev)) ShowWindow(hPrev, SW_RESTORE);
-            SetForegroundWindow(hPrev);
+            SetForegroundWindow(hPrev); BringWindowToTop(hPrev);
+            std::thread([] {
+                MessageBoxW(nullptr, L"程序已在运行中！", L"OpenAudioDucking",
+                            MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONINFORMATION);
+            }).detach();
+            Sleep(10000);
+            HWND hMB = FindWindowW(L"#32770", L"OpenAudioDucking");
+            if (hMB) PostMessageW(hMB, WM_CLOSE, 0, 0);
         }
-        // 弹窗置顶 + 10s 自动关闭
-        std::thread([] {
-            MessageBoxW(nullptr, L"程序已在运行中！", L"OpenAudioDucking",
-                        MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONINFORMATION);
-        }).detach();
-        Sleep(10000);
-        HWND hMB = FindWindowW(L"#32770", L"OpenAudioDucking");
-        if (hMB) PostMessageW(hMB, WM_CLOSE, 0, 0);
         CloseHandle(hMutex);
         return 0;
     }
@@ -411,6 +410,7 @@ int main(int, char**)
     }
 
     SV();
+    g_Ducker.Stop();  // 退出前恢复所有音量
     g_nid.uFlags = 0; Shell_NotifyIconW(NIM_DELETE, &g_nid);
     ImGui_ImplDX11_Shutdown(); ImGui_ImplWin32_Shutdown(); ImGui::DestroyContext();
     D3D_Kill(); DestroyWindow(hwnd); UnregisterClassW(wc.lpszClassName,wc.hInstance);

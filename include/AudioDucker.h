@@ -13,11 +13,11 @@
 struct DuckConfig
 {
     int activationDelayMs = 0;     // 延迟多久启动
-    int recoveryDelayMs = 0;       // 延迟多久恢复
-    int attackDurationMs = 150;    // 开始渐变时长
+    int recoveryDelayMs = 800;     // 延迟多久恢复
+    int attackDurationMs = 1000;   // 开始渐变时长
     int releaseDurationMs = 800;   // 结束渐变时长
-    float thresholdDb = -30.0f;    // 触发阈值 dB  (-100~0)
-    int duckPercent = 50;          // 闪避量
+    float thresholdDb = -50.0f;    // 触发阈值 dB  (-100~0)
+    int duckPercent = 90;          // 闪避量
 };
 
 struct AppConfig

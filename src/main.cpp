@@ -6,11 +6,10 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-#include <fstream>
 #include <algorithm>
-#include <cmath>
 #include <chrono>
 #include <shellapi.h>
+#include <shlobj.h>
 #include <thread>
 
 #include "imgui.h"
@@ -47,7 +46,7 @@ static std::chrono::steady_clock::time_point g_SaveTime;
 static std::string S(const std::wstring& w){ if(w.empty())return""; int l=WideCharToMultiByte(CP_UTF8,0,w.data(),(int)w.size(),0,0,0,0); std::string r(l,0); WideCharToMultiByte(CP_UTF8,0,w.data(),(int)w.size(),&r[0],l,0,0); return r; }
 static std::wstring W(const std::string& s){ if(s.empty())return L""; int l=MultiByteToWideChar(CP_UTF8,0,s.data(),(int)s.size(),0,0); std::wstring r(l,0); MultiByteToWideChar(CP_UTF8,0,s.data(),(int)s.size(),&r[0],l); return r; }
 static std::string N(const std::string& p){ auto x=p.find_last_of("/\\"); return(x!=std::string::npos)?p.substr(x+1):p; }
-static std::wstring OD(const wchar_t* f){ wchar_t b[MAX_PATH*10]={}; OPENFILENAMEW o={sizeof(o)}; o.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST|OFN_ALLOWMULTISELECT|OFN_EXPLORER; o.lpstrFilter=f; o.lpstrFile=b; o.nMaxFile=MAX_PATH*10; return GetOpenFileNameW(&o)?std::wstring(b):std::wstring{}; }
+static std::wstring OD(const wchar_t* f){ wchar_t b[MAX_PATH]={}; OPENFILENAMEW o={sizeof(o)}; o.Flags=OFN_FILEMUSTEXIST|OFN_PATHMUSTEXIST|OFN_EXPLORER; o.lpstrFilter=f; o.lpstrFile=b; o.nMaxFile=MAX_PATH; return GetOpenFileNameW(&o)?std::wstring(b):std::wstring{}; }
 static std::wstring SD(const wchar_t* f,const wchar_t* e){ wchar_t b[MAX_PATH]={}; OPENFILENAMEW o={sizeof(o)}; o.Flags=OFN_OVERWRITEPROMPT|OFN_PATHMUSTEXIST; o.lpstrFilter=f; o.lpstrDefExt=e; o.lpstrFile=b; o.nMaxFile=MAX_PATH; return GetSaveFileNameW(&o)?std::wstring(b):std::wstring{}; }
 
 // ── Sync ──
@@ -96,7 +95,7 @@ static void Theme(){
 }
 
 // ── D3D helpers ──
-static bool D3D_Create(HWND h){ DXGI_SWAP_CHAIN_DESC d={}; d.BufferCount=2; d.BufferDesc.Format=DXGI_FORMAT_R8G8B8A8_UNORM; d.BufferDesc.RefreshRate.Numerator=60; d.BufferDesc.RefreshRate.Denominator=1; d.Flags=DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; d.BufferUsage=DXGI_USAGE_RENDER_TARGET_OUTPUT; d.OutputWindow=h; d.SampleDesc.Count=1; d.Windowed=TRUE; d.SwapEffect=DXGI_SWAP_EFFECT_DISCARD; D3D_FEATURE_LEVEL fl=D3D_FEATURE_LEVEL_11_0; HRESULT hr=D3D11CreateDeviceAndSwapChain(0,D3D_DRIVER_TYPE_HARDWARE,0,0,&fl,1,D3D11_SDK_VERSION,&d,&g_pSwapChain,&g_pd3dDevice,0,&g_pd3dDeviceContext); if(FAILED(hr))return false; ID3D11Texture2D* bb=0; g_pSwapChain->GetBuffer(0,IID_PPV_ARGS(&bb)); if(bb){g_pd3dDevice->CreateRenderTargetView(bb,0,&g_mainRTView);bb->Release();} return true; }
+static bool D3D_Create(HWND h){ DXGI_SWAP_CHAIN_DESC d={}; d.BufferCount=2; d.BufferDesc.Format=DXGI_FORMAT_R8G8B8A8_UNORM; d.BufferDesc.RefreshRate.Numerator=60; d.BufferDesc.RefreshRate.Denominator=1; d.Flags=DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; d.BufferUsage=DXGI_USAGE_RENDER_TARGET_OUTPUT; d.OutputWindow=h; d.SampleDesc.Count=1; d.Windowed=TRUE; d.SwapEffect=DXGI_SWAP_EFFECT_DISCARD; D3D_FEATURE_LEVEL fl=D3D_FEATURE_LEVEL_11_0; HRESULT hr=D3D11CreateDeviceAndSwapChain(0,D3D_DRIVER_TYPE_HARDWARE,0,0,&fl,1,D3D11_SDK_VERSION,&d,&g_pSwapChain,&g_pd3dDevice,0,&g_pd3dDeviceContext); if(FAILED(hr)) hr=D3D11CreateDeviceAndSwapChain(0,D3D_DRIVER_TYPE_WARP,0,0,&fl,1,D3D11_SDK_VERSION,&d,&g_pSwapChain,&g_pd3dDevice,0,&g_pd3dDeviceContext); if(FAILED(hr))return false; ID3D11Texture2D* bb=0; g_pSwapChain->GetBuffer(0,IID_PPV_ARGS(&bb)); if(bb){g_pd3dDevice->CreateRenderTargetView(bb,0,&g_mainRTView);bb->Release();} return true; }
 static void D3D_KRT(){ if(g_mainRTView){g_mainRTView->Release();g_mainRTView=0;} }
 static void D3D_CRT(){ ID3D11Texture2D* bb=0; g_pSwapChain->GetBuffer(0,IID_PPV_ARGS(&bb)); if(bb){g_pd3dDevice->CreateRenderTargetView(bb,0,&g_mainRTView);bb->Release();} }
 static void D3D_Kill(){ D3D_KRT(); if(g_pSwapChain){g_pSwapChain->Release();g_pSwapChain=0;} if(g_pd3dDeviceContext){g_pd3dDeviceContext->Release();g_pd3dDeviceContext=0;} if(g_pd3dDevice){g_pd3dDevice->Release();g_pd3dDevice=0;} }
@@ -203,7 +202,7 @@ int main(int, char**)
             SetForegroundWindow(hPrev);
         }
         // 弹窗置顶 + 10s 自动关闭
-        std::thread([&]() {
+        std::thread([] {
             MessageBoxW(nullptr, L"程序已在运行中！", L"OpenAudioDucking",
                         MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_ICONINFORMATION);
         }).detach();
@@ -217,6 +216,11 @@ int main(int, char**)
 
     { wchar_t b[MAX_PATH]; GetModuleFileNameW(0,b,MAX_PATH);
       g_CfgDir=S(b); auto p=g_CfgDir.find_last_of("/\\"); g_CfgDir=g_CfgDir.substr(0,p+1); }
+    // Use %APPDATA% for writable config storage
+    { wchar_t appData[MAX_PATH];
+      if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData)))
+      { g_CfgDir = S(appData) + "\\OpenAudioDucking\\";
+        CreateDirectoryW(W(g_CfgDir).c_str(), nullptr); } }
 
     WNDCLASSEXW wc={sizeof(wc),CS_CLASSDC,WP,0,0,GetModuleHandleW(0),
         LoadIcon(GetModuleHandleW(0),MAKEINTRESOURCE(IDI_APP)),LoadCursor(0,IDC_ARROW),0,0,L"OpenAudioDucking",
@@ -233,8 +237,15 @@ int main(int, char**)
     // Font
     { ImFontConfig fc; fc.OversampleH=2; fc.OversampleV=2;
       static const ImWchar zh[]={0x0020,0x00FF,0x2000,0x206F,0x3000,0x30FF,0x4E00,0x9FFF,0xFF00,0xFFEF,0};
-      if(!io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/msyh.ttc", 15.0f, &fc, zh))
-        io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simsun.ttc", 15.0f, &fc, zh);
+      wchar_t fontPath[MAX_PATH];
+      if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_FONTS, nullptr, 0, fontPath)))
+      {
+          std::wstring fp = std::wstring(fontPath) + L"\\msyh.ttc";
+          if(!io.Fonts->AddFontFromFileTTF(S(fp).c_str(), 15.0f, &fc, zh)) {
+              fp = std::wstring(fontPath) + L"\\simsun.ttc";
+              io.Fonts->AddFontFromFileTTF(S(fp).c_str(), 15.0f, &fc, zh);
+          }
+      }
     }
     Theme();
     ImGui_ImplWin32_Init(hwnd); ImGui_ImplDX11_Init(g_pd3dDevice,g_pd3dDeviceContext);
@@ -251,7 +262,7 @@ int main(int, char**)
         if(done)break;
 
         // Deferred resize
-        if(g_RWidth&&g_RHeight){ D3D_KRT(); g_pSwapChain->ResizeBuffers(0,g_RWidth,g_RHeight,DXGI_FORMAT_UNKNOWN,0); g_RWidth=g_RHeight=0; D3D_CRT(); }
+        if(g_RWidth&&g_RHeight){ D3D_KRT(); if(SUCCEEDED(g_pSwapChain->ResizeBuffers(0,g_RWidth,g_RHeight,DXGI_FORMAT_UNKNOWN,0))){ g_RWidth=g_RHeight=0; D3D_CRT(); } else g_RWidth=g_RHeight=0; }
 
         bool visible = IsWindowVisible(hwnd);
         g_Ducker.Process();

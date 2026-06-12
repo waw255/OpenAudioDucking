@@ -172,7 +172,6 @@ void AudioDucker::EnumerateSessions()
         st.peakLinear = peak;
         st.peakDb = PeakToDb(smooth);
         st.smoothedPeak = smooth;
-        statusMap_[name] = st;
 
         // ── 同一遍遍历内做软渐变音量 ──
         bool isSecondary = false;
@@ -196,6 +195,8 @@ void AudioDucker::EnumerateSessions()
             { pVol->SetMasterVolume(vs.current, nullptr); pVol->Release(); }
             st.isDucked = (vs.current < 0.99f);
         }
+
+        statusMap_[name] = st;
 
         pCtrl2->Release(); pCtrl->Release();
     }

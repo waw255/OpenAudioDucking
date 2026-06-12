@@ -30,6 +30,8 @@ static UINT                     g_RWidth = 0, g_RHeight = 0;
 #define WM_TRAYICON (WM_USER + 100)
 static NOTIFYICONDATAW g_nid = {};
 static HWND g_hwnd = nullptr;
+static UINT g_TaskbarCreated = 0;
+static bool g_TrayAdded = false;
 static void UpdateTrayIcon(HWND hwnd);
 
 // ── State ──
@@ -103,6 +105,7 @@ static void D3D_Kill(){ D3D_KRT(); if(g_pSwapChain){g_pSwapChain->Release();g_pS
 // ── WndProc ──
 static LRESULT WINAPI WP(HWND h,UINT m,WPARAM w,LPARAM l){
     if(ImGui_ImplWin32_WndProcHandler(h,m,w,l)) return true;
+    if(m == g_TaskbarCreated) { g_TrayAdded = false; UpdateTrayIcon(h); return 0; }
     switch(m){
     case WM_SIZE: if(w!=SIZE_MINIMIZED){g_RWidth=LOWORD(l);g_RHeight=HIWORD(l);} else ShowWindow(h,SW_HIDE); return 0;
     case WM_CLOSE: ShowWindow(h,SW_HIDE); return 0;
@@ -131,7 +134,7 @@ static LRESULT WINAPI WP(HWND h,UINT m,WPARAM w,LPARAM l){
 
 // ── Tray icon ──
 static void UpdateTrayIcon(HWND hwnd){
-    static bool added=false;
+    if(!g_TaskbarCreated) g_TaskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
     g_nid.cbSize=sizeof(g_nid); g_nid.hWnd=hwnd; g_nid.uID=1;
     g_nid.uFlags=NIF_ICON|NIF_MESSAGE|NIF_TIP;
     g_nid.uCallbackMessage=WM_TRAYICON;
@@ -139,8 +142,9 @@ static void UpdateTrayIcon(HWND hwnd){
         MAKEINTRESOURCE(g_Run ? IDI_GREEN : IDI_RED));
     wcscpy(g_nid.szTip, L"OpenAudioDucking - ");
     wcscat(g_nid.szTip, g_Run ? L"运行中" : L"已停止");
-    Shell_NotifyIconW(added ? NIM_MODIFY : NIM_ADD, &g_nid);
-    added=true;
+    Shell_NotifyIconW(g_TrayAdded ? NIM_MODIFY : NIM_ADD, &g_nid);
+    Shell_NotifyIconW(NIM_SETVERSION, &g_nid);
+    g_TrayAdded = true;
 }
 
 // ── VU bar ──

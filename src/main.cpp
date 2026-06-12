@@ -268,8 +268,7 @@ int main(int, char**)
         TA();
 
         if(!visible){
-            // 隐藏时跳过 GPU 渲染，但保持 Process 频率不降
-            Sleep(30);
+            MsgWaitForMultipleObjects(0, nullptr, FALSE, 50, QS_ALLINPUT);
             continue;
         }
 
@@ -410,7 +409,8 @@ int main(int, char**)
     }
 
     SV();
-    g_Ducker.Stop();  // 退出前恢复所有音量
+    g_Ducker.Stop();
+    g_Ducker.ForceRestore();
     g_nid.uFlags = 0; Shell_NotifyIconW(NIM_DELETE, &g_nid);
     ImGui_ImplDX11_Shutdown(); ImGui_ImplWin32_Shutdown(); ImGui::DestroyContext();
     D3D_Kill(); DestroyWindow(hwnd); UnregisterClassW(wc.lpszClassName,wc.hInstance);

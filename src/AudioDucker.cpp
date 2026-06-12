@@ -234,8 +234,33 @@ void AudioDucker::Start()
 void AudioDucker::Stop()
 {
     running_ = false; phase_ = Idle;
-    // Set all targets to 1.0 for smooth restore
     for (auto& [name, vs] : volStates_) vs.target = 1.0f;
+}
+
+void AudioDucker::ForceRestore()
+{
+    if (!comOk_ || !pMgr_) return;
+    RefreshPidCache();
+    IAudioSessionEnumerator* pSes = nullptr;
+    if (FAILED(pMgr_->GetSessionEnumerator(&pSes))) return;
+    int cnt = 0; pSes->GetCount(&cnt);
+    for (int i = 0; i < cnt; i++) {
+        IAudioSessionControl* pCtrl = nullptr;
+        if (FAILED(pSes->GetSession(i, &pCtrl))) continue;
+        IAudioSessionControl2* pCtrl2 = nullptr;
+        if (FAILED(pCtrl->QueryInterface(IID_IAudioSessionControl2, (void**)&pCtrl2))) { pCtrl->Release(); continue; }
+        DWORD pid = 0; pCtrl2->GetProcessId(&pid);
+        std::wstring name = PidToName(pid);
+        bool isSec = false;
+        for (auto& a : apps_) { if (!a.isPrimary && IsApp(name, a)) { isSec = true; break; } }
+        if (isSec) {
+            ISimpleAudioVolume* pVol = nullptr;
+            if (SUCCEEDED(pCtrl->QueryInterface(IID_ISimpleAudioVolume, (void**)&pVol)))
+            { pVol->SetMasterVolume(1.0f, nullptr); pVol->Release(); }
+        }
+        pCtrl2->Release(); pCtrl->Release();
+    }
+    pSes->Release();
 }
 
 // ── GetActiveAudioSessions ─────────────────────

@@ -62,6 +62,7 @@ public:
 
     void Start();
     void Stop();
+    void ForceRestore();  // 直接恢复所有次应用音量,无渐变
     bool IsRunning() const { return running_; }
 
     void Process();

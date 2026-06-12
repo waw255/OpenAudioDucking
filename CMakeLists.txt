@@ -46,6 +46,9 @@ target_link_libraries(OpenAudioDucking PRIVATE
     uuid
 )
 
+# 静态链接，生成单文件无需额外 DLL
+target_link_options(OpenAudioDucking PRIVATE -static)
+
 # ImGui 需要 Win32 窗口，设置链接器子系统为 Windows
 set_target_properties(OpenAudioDucking PROPERTIES
     WIN32_EXECUTABLE TRUE

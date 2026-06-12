@@ -17,8 +17,16 @@ cmake --build build --config Release
 
 First CMake configure fetches Dear ImGui from GitHub (FetchContent). Subsequent builds are incremental.
 
-**Runtime DLLs (MinGW builds):** `libgcc_s_seh-1.dll`, `libstdc++-6.dll`, `libwinpthread-1.dll` must be in
-the same directory as `OpenAudioDucking.exe` or on PATH.
+**Static linking is the default** (`target_link_options ... -static` in CMakeLists.txt:50). No extra DLLs needed at runtime.
+
+## Release
+
+```powershell
+cmake --build build -j4 --config Release
+Copy-Item -LiteralPath "build\OpenAudioDucking.exe" -Destination "release\"
+```
+
+Single static exe, no dependencies beyond standard Windows DLLs.
 
 ## Architecture
 
@@ -44,6 +52,7 @@ the same directory as `OpenAudioDucking.exe` or on PATH.
 - **Font loading:** tries `msyh.ttc` then `simsun.ttc` from Windows Fonts directory for CJK glyph support.
   Systems without these fonts (e.g. English-only) fail silently — ImGui falls back to the default font.
 - **Tray icon:** minimize/close hides to tray. Green icon = running, red = stopped. Right-click menu.
+  Handles `TaskbarCreated` (Explorer restart) — resets `g_TrayAdded` to force re-add with `NIM_ADD`.
 
 ## ImGui notes
 
@@ -53,3 +62,9 @@ the same directory as `OpenAudioDucking.exe` or on PATH.
 ## Testing
 
 No real tests. `tests/CMakeLists.txt` is a placeholder. Do not run `ctest`.
+
+## Git workflow
+
+- Commit: `git add -A; git commit -m "..."` — stage everything, single commit.
+- Revert: `git reset --soft HEAD~n` — undo commits, keep changes in working tree.
+- Tag: `git tag -a vX.Y.Z -m "vX.Y.Z: <summary>"` — annotated tags.
